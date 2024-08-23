@@ -10,7 +10,7 @@ def example():
     detect the bank.
     """
     pipeline = Pipeline(
-        file_path="src/monopoly/examples/example_statement.pdf",
+        file_path="src/monopoly/examples/test.pdf",
         # bank=ExampleBank
     )
 

@@ -39,7 +39,7 @@ class DebitStatement(BaseStatement):
         """
         page_number = transaction_match.page_number
         withdrawal_pos = self.get_withdrawal_pos(page_number)
-        deposit_pos = self.get_deposit_pos(page_number)
+        deposit_pos = self.get_deposit_pos(page_number, withdrawal_pos)
 
         if deposit_pos and withdrawal_pos:
             amount = transaction_match.groupdict.amount
@@ -59,19 +59,19 @@ class DebitStatement(BaseStatement):
         return self.get_column_pos("withdraw", page_number=page_number)
 
     @lru_cache
-    def get_deposit_pos(self, page_number: int) -> int | None:
-        return self.get_column_pos("deposit", page_number=page_number)
+    def get_deposit_pos(self, page_number: int, start: int) -> int | None:
+        return self.get_column_pos("deposit", page_number=page_number, start_pos=start)
 
     @lru_cache
-    def get_column_pos(self, column_type: str, page_number: int) -> int | None:
+    def get_column_pos(self, column_type: str, page_number: int, start_pos: int = 0) -> int | None:
         pattern = re.compile(rf"{column_type}[\w()$]*", re.IGNORECASE)
         if match := pattern.search(self.header):
-            return self.get_header_pos(match.group(), page_number)
+            return self.get_header_pos(match.group(), page_number, start_pos)
         logger.warning(f"`{column_type}` column not found in header")
         return None
 
     @lru_cache
-    def get_header_pos(self, column_name: str, page_number: int) -> int:
+    def get_header_pos(self, column_name: str, page_number: int, start_pos: int) -> int:
         """
         Returns position of the 'WITHDRAWAL' or 'DEPOSIT' header on a bank statement
         for a particular page.
@@ -90,7 +90,7 @@ class DebitStatement(BaseStatement):
         pages = list(self.pages)
         lines = pages[page_number].lines
         for line in lines:
-            header_start_pos = line.lower().find(column_name.lower())
+            header_start_pos = line.lower().find(column_name.lower(), start_pos)
             if header_start_pos == -1:
                 continue
             return header_start_pos + len(column_name)
