@@ -32,7 +32,7 @@ class Dbs(BankBase):
         bank_name=BankNames.DBS,
         statement_date_pattern=regex(r"(\d{2}\s[A-Za-z]{3}\s\d{4})"),
         multiline_transactions=True,
-        header_pattern=regex(r"(WITHDRAWAL.*DEPOSIT.*BALANCE)"),
+        header_pattern=regex(r"(Withdrawal.*Deposit.*Balance)"),
         transaction_pattern=DebitTransactionPatterns.DBS,
     )
 

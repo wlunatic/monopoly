@@ -80,6 +80,8 @@ class BaseStatement(ABC):
                         lines=page.lines,
                         idx=line_num,
                     )
+                    if (not processed_match.groupdict.description): 
+                        continue
                     transaction = Transaction(**processed_match.groupdict)
                     transactions.append(transaction)
 
