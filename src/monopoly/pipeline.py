@@ -143,19 +143,42 @@ class Pipeline:
 
         with open(output_path, mode="w", encoding="utf8") as file:
             writer = csv.writer(file)
+            
+            # new header TODO make this configurable 
+            new_header = [
+                "Date",
+                "Amount",
+                "Amount",
+                "Description"
+            ]
 
             # header
-            writer.writerow(statement.columns)
+            # writer.writerow(statement.columns)
+            writer.writerow(new_header)
 
             for transaction in transactions:
-                writer.writerow(
-                    (
-                        [
-                            transaction.date,
-                            transaction.description,
-                            transaction.amount,
-                        ]
+                if (transaction.amount < 0):
+                    writer.writerow(
+                        (
+                            [
+                                transaction.date,
+                                abs(transaction.amount),
+                                0,
+                                transaction.description,
+                            ]
+                        )
                     )
-                )
+                    
+                else:
+                    writer.writerow(
+                        (
+                            [
+                                transaction.date,
+                                0,
+                                transaction.amount,
+                                transaction.description,
+                            ]
+                        )
+                    )
 
         return output_path
