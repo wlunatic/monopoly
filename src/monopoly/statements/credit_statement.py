@@ -3,6 +3,8 @@ import re
 
 from monopoly.constants import EntryType
 from monopoly.statements.transaction import Transaction, TransactionGroupDict
+from monopoly.pdf import PdfParser
+from monopoly.config import StatementConfig
 
 from .base import BaseStatement, SafetyCheckError
 
@@ -13,8 +15,9 @@ class CreditStatement(BaseStatement):
     """
     A dataclass representation of a credit statement
     """
-
-    statement_type = EntryType.CREDIT
+    def __init__(self, parser: PdfParser, config: StatementConfig, header: str):
+        super().__init__(parser, config, header)
+        self.statement_type = EntryType.CREDIT
 
     def post_process_transactions(self, transactions) -> list[Transaction]:
         previous_month_balances = self.get_prev_month_balances()
