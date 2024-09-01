@@ -131,7 +131,6 @@ class CreditTransactionPatterns(RegexEnum):
 class DebitTransactionPatterns(RegexEnum):
     DBS = (
         rf"(?P<transaction_date>{ISO8601.DD_MM_YYYY})\s+"
-        rf"(?P<transaction_date>{ISO8601.DD_MMM})\s+"
         + SharedPatterns.DESCRIPTION
         + SharedPatterns.AMOUNT_EXTENDED_WITHOUT_EOL
         + SharedPatterns.BALANCE
