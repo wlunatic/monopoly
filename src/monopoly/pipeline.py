@@ -163,7 +163,7 @@ class Pipeline:
                             [
                                 transaction.date,
                                 abs(transaction.amount),
-                                0,
+                                "",
                                 transaction.description,
                             ]
                         )
@@ -174,7 +174,7 @@ class Pipeline:
                         (
                             [
                                 transaction.date,
-                                0,
+                                "",
                                 transaction.amount,
                                 transaction.description,
                             ]
