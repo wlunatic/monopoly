@@ -6,15 +6,12 @@ from typing import Optional, Type
 from dateparser import parse
 from pydantic import SecretStr
 
-from monopoly.bank_detector import BankDetector
 from monopoly.banks import BankBase
 from monopoly.config import DateOrder
-from monopoly.generic import GenericStatementHandler
-from monopoly.generic.generic_handler import GenericBank
+from monopoly.generic import GenericBank, GenericStatementHandler
 from monopoly.handler import StatementHandler
-from monopoly.pdf import PdfDocument, PdfParser
-from monopoly.statements import BaseStatement
-from monopoly.statements.transaction import Transaction
+from monopoly.pdf import PdfPage, PdfParser
+from monopoly.statements import BaseStatement, Transaction
 from monopoly.write import generate_name
 
 logger = logging.getLogger(__name__)
@@ -25,50 +22,25 @@ class Pipeline:
 
     def __init__(
         self,
-        file_path: Optional[Path] = None,
-        file_bytes: Optional[bytes] = None,
+        parser: PdfParser,
         passwords: Optional[list[SecretStr]] = None,
-        bank: Optional[Type[BankBase]] = None,
     ):
-        self.file_path = file_path
-        self.file_bytes = file_bytes
         self.passwords = passwords
-
-        if not any([self.file_path, self.file_bytes]):
-            raise RuntimeError("Either `file_path` or `file_bytes` must be passed")
-
-        if self.file_path and self.file_bytes:
-            raise RuntimeError(
-                "Only one of `file_path` or `file_bytes` should be passed"
-            )
-
-        document = PdfDocument(passwords, file_bytes=file_bytes, file_path=file_path)
-        bank = bank or self.detect_bank(document)
-        parser = PdfParser(bank, document)
-        self.handler = self.create_handler(bank, parser)
+        pages = parser.get_pages()
+        self.handler = self.create_handler(parser.bank, pages)
 
     @staticmethod
-    def create_handler(
-        bank: Type[BankBase], parser: PdfParser
-    ) -> GenericStatementHandler | StatementHandler:
+    def create_handler(bank: Type[BankBase], pages: list[PdfPage]) -> StatementHandler:
         if issubclass(bank, GenericBank):
             logger.debug("Using generic statement handler")
-            return GenericStatementHandler(parser)
+            return GenericStatementHandler(bank, pages)
         logger.debug("Using statement handler with bank: %s", bank.__name__)
-        return StatementHandler(parser)
-
-    @staticmethod
-    def detect_bank(document) -> Type[BankBase]:
-        analyzer = BankDetector(document)
-        if bank := analyzer.detect_bank():
-            return bank
-        logger.warning("Unable to detect bank, transactions may be inaccurate")
-        return GenericBank
+        return StatementHandler(bank, pages)
 
     def extract(self, safety_check=True) -> BaseStatement:
         """Extracts transactions from the statement, and performs
         a safety check to make sure that total transactions add up"""
-        statement = self.handler.statement
+        statement = self.handler.get_statement()
         transactions = statement.get_transactions()
 
         if not transactions:
@@ -79,7 +51,7 @@ class Pipeline:
         if not statement.statement_date:
             raise ValueError("No statement date found")
 
-        if safety_check:
+        if safety_check and statement.config.safety_check:
             statement.perform_safety_check()
 
         return statement

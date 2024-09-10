@@ -6,6 +6,7 @@ from test_utils.skip import skip_if_encrypted
 from test_utils.transactions import get_transactions_as_dict, read_transactions_from_csv
 
 from monopoly.banks import BankBase, Dbs, Maybank, Ocbc
+from monopoly.pdf import PdfDocument, PdfParser
 from monopoly.pipeline import Pipeline
 from monopoly.statements import DebitStatement
 
@@ -29,7 +30,10 @@ def test_bank_debit_statements(
 ):
     bank_name = bank.debit_config.bank_name
     test_directory = Path(__file__).parent / bank_name / "debit"
-    pipeline = Pipeline(test_directory / "input.pdf")
+
+    document = PdfDocument(test_directory / "input.pdf")
+    parser = PdfParser(bank, document)
+    pipeline = Pipeline(parser)
     statement: DebitStatement = pipeline.extract()
 
     # check raw data

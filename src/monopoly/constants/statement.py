@@ -21,6 +21,8 @@ class BankNames(AutoEnum):
     MAYBANK = auto()
     OCBC = auto()
     STANDARD_CHARTERED = auto()
+    UOB = auto()
+    ZKB = auto()
 
 
 class InternalBankNames(AutoEnum):
@@ -89,6 +91,10 @@ class StatementBalancePatterns(RegexEnum):
         r"(?P<description>BALANCE FROM PREVIOUS STATEMENT?)\s+"
         + SharedPatterns.AMOUNT_EXTENDED_WITHOUT_EOL
     )
+    UOB = (
+        r"(?P<description>PREVIOUS BALANCE?)\s+"
+        + SharedPatterns.AMOUNT_EXTENDED_WITHOUT_EOL
+    )
 
 
 class CreditTransactionPatterns(RegexEnum):
@@ -103,8 +109,8 @@ class CreditTransactionPatterns(RegexEnum):
         + SharedPatterns.AMOUNT_EXTENDED
     )
     HSBC = (
-        rf"(?P<posting_date>{ISO8601.DD_MMM})\s+"
-        rf"(?P<transaction_date>{ISO8601.DD_MMM})\s+"
+        rf"(?P<posting_date>{ISO8601.DD_MMM_RELAXED})\s+"
+        rf"(?P<transaction_date>{ISO8601.DD_MMM_RELAXED})\s+"
         + SharedPatterns.DESCRIPTION
         + SharedPatterns.AMOUNT_EXTENDED
     )
@@ -124,6 +130,12 @@ class CreditTransactionPatterns(RegexEnum):
         rf"(?P<posting_date>{ISO8601.DD_MMM})\s+"
         + SharedPatterns.DESCRIPTION
         + r"(?:(?P<transaction_ref>Transaction\sRef\s\d+)?)\s+"
+        + SharedPatterns.AMOUNT_EXTENDED
+    )
+    UOB = (
+        rf"(?P<posting_date>{ISO8601.DD_MMM})\s+"
+        rf"(?P<transaction_date>{ISO8601.DD_MMM})\s+"
+        + SharedPatterns.DESCRIPTION
         + SharedPatterns.AMOUNT_EXTENDED
     )
 
@@ -149,4 +161,17 @@ class DebitTransactionPatterns(RegexEnum):
         + SharedPatterns.DESCRIPTION
         + SharedPatterns.AMOUNT_EXTENDED_WITHOUT_EOL
         + SharedPatterns.BALANCE
+    )
+    UOB = (
+        rf"(?P<transaction_date>{ISO8601.DD_MMM})\s+"
+        + SharedPatterns.DESCRIPTION
+        + SharedPatterns.AMOUNT_EXTENDED_WITHOUT_EOL
+        + SharedPatterns.BALANCE
+    )
+    ZKB = (
+        rf"(?P<transaction_date>{ISO8601.DD_MM_YYYY})\s+"
+        + SharedPatterns.DESCRIPTION
+        + r"(?P<amount>\d{1,3}(\'\d{3})*(\.\d+)?)\s+"
+        + rf"(?P<value_date>{ISO8601.DD_MM_YYYY})\s+"
+        + r"(?P<balance>\d{1,3}(\'\d{3})*(\.\d+)?)$"
     )

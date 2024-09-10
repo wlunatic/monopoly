@@ -26,13 +26,13 @@ Monopoly is a pip-installable Python package on [PyPI](https://pypi.org/project/
 Since Monopoly uses `pdftotext`, you'll need to install additional dependencies:
 
 ```sh
-apt-get install build-essential libpoppler-cpp-dev pkg-config
+apt-get install build-essential libpoppler-cpp-dev pkg-config ocrmypdf
 ```
 
 or
 
 ```sh
-brew install gcc@11 pkg-config poppler
+brew install gcc@11 pkg-config poppler ocrmypdf
 ```
 
 Then install with pipx:
@@ -72,7 +72,7 @@ python3 src/monopoly/examples/single_statement.py
 ## Features
 - Parses PDFs using predefined configuration classes per bank.
 - Handles locked PDFs with credentials passed via environment variables.
-- Supports a variety of date/number formats and determines if a transaction is debit or credit.
+- Supports adding OCR for image-based bank statements.
 - Provides a generic parser that can be used without any predefined configuration (caveat emptor).
 - Includes a safety check (enabled by default) that validates totals for debit or credit statements.
 

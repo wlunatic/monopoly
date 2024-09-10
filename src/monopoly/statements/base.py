@@ -3,13 +3,12 @@ import re
 from abc import ABC
 from datetime import datetime
 from functools import cached_property, lru_cache
-from pathlib import Path
 
 from dateparser import parse
 
 from monopoly.config import StatementConfig
 from monopoly.constants import Columns, SharedPatterns
-from monopoly.pdf import PdfParser
+from monopoly.pdf import PdfPage
 from monopoly.statements.transaction import (
     Transaction,
     TransactionGroupDict,
@@ -28,17 +27,20 @@ class BaseStatement(ABC):
     """
 
     statement_type = "base"
+    columns: list[str] = [
+        Columns.DATE,
+        Columns.DESCRIPTION,
+        Columns.AMOUNT,
+    ]
 
-    def __init__(self, parser: PdfParser, config: StatementConfig, header: str):
-        self.pages = parser.get_pages()
+    def __init__(
+        self,
+        pages: list[PdfPage],
+        config: StatementConfig,
+        header: str,
+    ):
         self.config = config
-        self.columns: list[str] = [
-            Columns.DATE,
-            Columns.DESCRIPTION,
-            Columns.AMOUNT,
-        ]
-        self.parser = parser
-        self.document = parser.document
+        self.pages = pages
         self.header = header
 
     @cached_property
@@ -56,12 +58,11 @@ class BaseStatement(ABC):
         )
 
     @property
-    def bank(self):
-        return self.parser.bank
-
-    @property
     def pattern(self):
-        return self.config.transaction_pattern
+        pattern = self.config.transaction_pattern
+        if isinstance(pattern, str):
+            pattern = re.compile(pattern)
+        return pattern
 
     @lru_cache
     def get_transactions(self) -> list[Transaction] | None:
@@ -70,6 +71,9 @@ class BaseStatement(ABC):
         for page_num, page in enumerate(self.pages):
             for line_num, line in enumerate(page.lines):
                 if match := self.pattern.search(line):
+                    if self._check_bound(match):
+                        continue
+
                     groupdict = TransactionGroupDict(**match.groupdict())
                     transaction_match = TransactionMatch(
                         groupdict, match, page_number=page_num
@@ -91,6 +95,13 @@ class BaseStatement(ABC):
 
         post_processed_transactions = self.post_process_transactions(transactions)
         return post_processed_transactions
+
+    def _check_bound(self, match: re.Match):
+        if bound := self.config.transaction_bound:
+            if match.span(Columns.AMOUNT)[0] >= bound:
+                logger.debug("Transaction exists beyond boundary, ignoring")
+                return True
+        return False
 
     def pre_process_match(
         self, transaction_match: TransactionMatch
@@ -168,10 +179,7 @@ class BaseStatement(ABC):
 
     @property
     def failed_safety_message(self) -> str:
-        return (
-            f"Safety check for {Path(self.document.name).stem} failed - "
-            "transactions may be inaccurate"
-        )
+        return "Safety check failed - transactions may be inaccurate"
 
     @cached_property
     def transactions(self):

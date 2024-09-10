@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from monopoly.config import PdfConfig, StatementConfig
 
@@ -15,6 +16,7 @@ class BankBase:
 
     statement_configs: list[StatementConfig]
     pdf_config: PdfConfig = PdfConfig()
+    identifiers: list[list[Any]]
 
     def __init_subclass__(cls, **kwargs) -> None:
         if not hasattr(cls, "statement_configs"):
@@ -27,4 +29,10 @@ class BankBase:
                 f"{cls.__class__.__name__} "
                 "must implement `identifiers` class variable"
             )
+
+        # validation logic only applies to regular banks
+        if cls.identifiers:
+            if not any(isinstance(item, list) for item in cls.identifiers):
+                raise TypeError("`identifiers` must be a list of lists")
+
         return super().__init_subclass__(**kwargs)

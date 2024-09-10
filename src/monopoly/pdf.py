@@ -3,14 +3,17 @@ from dataclasses import dataclass
 from functools import cached_property, lru_cache
 from io import BytesIO
 from pathlib import Path
-from typing import Optional, Type
+from typing import TYPE_CHECKING, Optional, Type
 
-import fitz
 import pdftotext
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pymupdf import TEXTFLAGS_TEXT, Document, Page
 
-from monopoly.banks import BankBase
+from monopoly.identifiers import MetadataIdentifier
+
+if TYPE_CHECKING:
+    from monopoly.banks import BankBase
 
 logger = logging.getLogger(__name__)
 
@@ -59,77 +62,38 @@ class BadPasswordFormatError(Exception):
     """Exception raised passwords are not provided in a proper format"""
 
 
-class PdfDocument:
-    """Handles logic related to the opening, unlocking and storage of a PDF document"""
+class PdfDocument(Document):
+    """Handles logic related to the opening, unlocking, and storage of a PDF document."""
 
     def __init__(
         self,
-        passwords: Optional[list[SecretStr]] = None,
         file_path: Optional[Path] = None,
-        file_bytes: Optional[bytes] = None,
+        file_bytes: Optional[bytes | BytesIO] = None,
+        passwords: Optional[list[SecretStr]] = None,
     ):
-        self._passwords = passwords
         self.file_path = file_path
         self.file_bytes = file_bytes
+        self.passwords = passwords or PdfPasswords().pdf_passwords
 
-    @cached_property
-    def raw_text(self) -> str:
-        raw_text = ""
-        for page in self.open():
-            raw_text += page.get_text()
-        return raw_text
-
-    @property
-    def passwords(self):
-        if not self._passwords:
-            return PdfPasswords().pdf_passwords
-        return self._passwords
-
-    @cached_property
-    def name(self):
-        return self.open().name
-
-    @cached_property
-    def metadata(self):
-        return self.open().metadata
-
-    @cached_property
-    def document(self) -> fitz.Document:
-        """
-        Returns a Python representation of a PDF document.
-        """
-        if not self.file_path and not self.file_bytes:
+        if not any([self.file_path, self.file_bytes]):
             raise RuntimeError("Either `file_path` or `file_bytes` must be passed")
 
         if self.file_path and self.file_bytes:
             raise RuntimeError(
-                "Only one of `file_path` or `file_bytes` should be defined"
+                "Only one of `file_path` or `file_bytes` should be passed"
             )
 
         args = {"filename": self.file_path, "stream": self.file_bytes}
-        return fitz.Document(**args)
+        super().__init__(**args)
 
-    @lru_cache
-    def get_byte_stream(self) -> BytesIO:
-        if self.file_path:
-            with open(self.file_path, "rb") as file:
-                stream = BytesIO(file.read())
-            return stream
+    @cached_property
+    def metadata_identifier(self):
+        return MetadataIdentifier(**self.metadata)
 
-        if self.file_bytes:
-            return BytesIO(self.file_bytes)
-
-        raise RuntimeError("Unable to create document")
-
-    @lru_cache
-    def open(self) -> fitz.Document:
-        """
-        Opens and decrypts a PDF document
-        """
-        document = self.document
-
-        if not document.is_encrypted:
-            return document
+    def unlock_document(self):
+        """Attempt to unlock the document using the provided passwords."""
+        if not self.is_encrypted:
+            return self
 
         if not self.passwords:
             raise MissingPasswordError("No password found in PDF configuration")
@@ -144,16 +108,27 @@ class PdfDocument:
             raise BadPasswordFormatError("Passwords should be stored as SecretStr")
 
         for password in self.passwords:
-            document.authenticate(password.get_secret_value())
-
-            if not document.is_encrypted:
+            if self.authenticate(password.get_secret_value()):
                 logger.debug("Successfully authenticated with password")
-                return document
-        raise WrongPasswordError(f"Could not open document: {document.name}")
+                return self
+
+        raise WrongPasswordError(f"Could not open document: {self.name}")
+
+    @cached_property
+    def raw_text(self) -> str:
+        """Extracts and returns the text from the PDF"""
+        raw_text = ""
+        for page in self:
+            raw_text += page.get_text()
+        return raw_text
 
 
 class PdfParser:
-    def __init__(self, bank: Type[BankBase], document: PdfDocument):
+    def __init__(
+        self,
+        bank: Type["BankBase"],
+        document: PdfDocument,
+    ):
         """
         Class responsible for parsing PDFs and returning raw text
 
@@ -162,6 +137,7 @@ class PdfParser:
         """
         self.bank = bank
         self.document = document
+        self.metadata_identifier = document.metadata_identifier
 
     @property
     def pdf_config(self):
@@ -175,10 +151,18 @@ class PdfParser:
     def page_bbox(self):
         return self.pdf_config.page_bbox
 
+    @cached_property
+    def ocr_available(self):
+        if ids := self.pdf_config.ocr_identifiers:
+            for identifiers in ids:
+                if self.metadata_identifier.matches(identifiers):
+                    return True
+        return False
+
     @lru_cache
     def get_pages(self) -> list[PdfPage]:
         logger.debug("Extracting text from PDF")
-        document = self.document.open()
+        document = self.document
 
         num_pages = list(range(document.page_count))
         document.select(num_pages[self.page_range])
@@ -192,7 +176,7 @@ class PdfParser:
                 page.set_cropbox(cropbox)
             page = self._remove_vertical_text(page)
 
-        # certain statements require garbage collection, so that duplicate objects
+        # certain statements requsire garbage collection, so that duplicate objects
         # do not cause pdftotext to fail due to missing xrefs/null values
         # however, setting `garbage=2` may cause issues with other statements
         # so an initial attempt should be made to run using `garbage=0`
@@ -213,7 +197,7 @@ class PdfParser:
         raise RuntimeError("Unable to retrieve pages")
 
     @staticmethod
-    def _remove_vertical_text(page: fitz.Page):
+    def _remove_vertical_text(page: Page):
         """Helper function to remove vertical text, based on writing direction (wdir).
 
         This helps avoid situations where the PDF is oddly parsed, due to vertical text
@@ -231,10 +215,50 @@ class PdfParser:
             If line["dir"] != (1, 0), the text of its spans is rotated.
 
         """
-        for block in page.get_text("dict", flags=fitz.TEXTFLAGS_TEXT)["blocks"]:
+        for block in page.get_text("dict", flags=TEXTFLAGS_TEXT)["blocks"]:
             for line in block["lines"]:
                 writing_direction = line["dir"]
                 if writing_direction != (1, 0):
                     page.add_redact_annot(line["bbox"])
-        page.apply_redactions(images=fitz.PDF_REDACT_IMAGE_NONE)
+        page.apply_redactions(images=0)
         return page
+
+    @staticmethod
+    def apply_ocr(document: PdfDocument) -> PdfDocument:
+        # pylint: disable=import-outside-toplevel
+        try:
+            from ocrmypdf import Verbosity, configure_logging, ocr
+            from ocrmypdf.exceptions import PriorOcrFoundError, TaggedPDFError
+        except ImportError:
+            logger.warning("ocrmypdf not installed, skipping OCR")
+            return document
+
+        added_ocr = False
+        try:
+            logger.debug("Applying OCR")
+            original_metadata = document.metadata
+            output_bytes = BytesIO()
+            configure_logging(Verbosity.quiet)
+            logging.getLogger("ocrmypdf").setLevel(logging.ERROR)
+            ocr(
+                BytesIO(document.tobytes()),
+                output_bytes,
+                language="eng",
+                tesseract_config="tesseract.cfg",
+                progress_bar=False,
+                optimize=0,
+                fast_web_view=999999,
+                output_type="pdf",
+            )
+            output_bytes.seek(0)
+            added_ocr = True
+
+        except (PriorOcrFoundError, TaggedPDFError):
+            pass
+
+        # pylint: disable=attribute-defined-outside-init
+        if added_ocr:
+            logger.debug("Adding OCR layer to document")
+            document = PdfDocument(file_bytes=output_bytes)
+            document.metadata = original_metadata
+        return document

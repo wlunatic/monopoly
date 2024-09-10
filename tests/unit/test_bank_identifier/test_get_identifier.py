@@ -1,9 +1,8 @@
-from io import BytesIO
 from unittest.mock import Mock, patch
 
 import pytest
 
-from monopoly.bank_detector import BankDetector
+from monopoly.banks.detector import BankDetector
 from monopoly.identifiers import MetadataIdentifier
 from monopoly.pdf import PdfDocument
 
@@ -20,13 +19,10 @@ class MockDocument:
 class MockPdfDocument:
     def __init__(self, is_encrypted: bool, metadata: dict):
         self.is_encrypted = is_encrypted
-        self.metadata = metadata
+        self.metadata_identifier = MetadataIdentifier(**metadata)
 
     def open(self):
-        return MockDocument(self.is_encrypted, self.metadata)
-
-    def get_byte_stream(self):
-        return BytesIO(b"%PDF-1.6")
+        return MockDocument(self.is_encrypted, self.metadata_identifier)
 
 
 @pytest.fixture
@@ -58,8 +54,8 @@ def mock_non_encrypted_document():
 
 
 def test_metadata_identifier(mock_non_encrypted_document):
-    with patch.object(PdfDocument, "open", new_callable=Mock) as mock_open:
-        mock_open.return_value = mock_non_encrypted_document
+    with patch.object(PdfDocument, "unlock_document", new_callable=Mock) as mock_unlock:
+        mock_unlock.return_value = mock_non_encrypted_document
 
         expected_identifier = MetadataIdentifier(
             title="foo",
@@ -68,5 +64,5 @@ def test_metadata_identifier(mock_non_encrypted_document):
 
         metadata_analyzer = BankDetector(mock_non_encrypted_document)
 
-        assert isinstance(metadata_analyzer.metadata_items[0], MetadataIdentifier)
-        assert metadata_analyzer.metadata_items[0] == expected_identifier
+        assert isinstance(metadata_analyzer.metadata_identifier, MetadataIdentifier)
+        assert metadata_analyzer.metadata_identifier == expected_identifier

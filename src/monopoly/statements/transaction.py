@@ -104,14 +104,16 @@ class Transaction:
     @field_validator(Columns.AMOUNT, mode="before")
     def prepare_amount_for_float_coercion(cls, amount: str) -> str:
         """
-        Replaces commas, whitespaces and parentheses in string representation of floats
+        Replaces commas, whitespaces, apostrophes and parentheses in string
+        representation of floats
         e.g.
+            1'234.00 -> 1234.00
             1,234.00 -> 1234.00
             (-10.00) -> -10.00
             (-1.56 ) -> -1.56
         """
         if isinstance(amount, str):
-            return re.sub(r"[,)(\s]", "", amount)
+            return re.sub(r"[,)(\s']", "", amount)
         return amount
 
     # pylint: disable=bad-classmethod-argument
@@ -132,6 +134,10 @@ class Transaction:
         """
         Converts transactions with a suffix of "CR" or "+" to positive
         """
+        # avoid negative zero
+        if self.amount == 0:
+            return self
+
         if self.suffix in ("CR", "+"):
             self.amount = abs(self.amount)
 

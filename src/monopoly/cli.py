@@ -1,10 +1,10 @@
 import traceback
 from concurrent.futures import ProcessPoolExecutor
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Collection, Iterable, Optional, TypedDict
 
 import click
-from pydantic.dataclasses import Field, dataclass
 from tabulate import tabulate
 from tqdm import tqdm
 
@@ -41,7 +41,7 @@ class Result:
 
     source_file_name: str
     target_file_name: Optional[str] = None
-    error_info: dict[str, str] = Field(default_factory=dict)
+    error_info: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -78,6 +78,9 @@ class Report:
         Parses all results, displaying the number of successfully
         processed statements and any errors.
         """
+        for res in self.processed_results:
+            click.echo(f"{res.source_file_name} -> {res.target_file_name}")
+
         if self.number_errored > 0:
             error_msg = (
                 f"{self.number_errored} statement(s) had errors while processing"
@@ -97,9 +100,6 @@ class Report:
                     fg="red",
                 )
             )
-
-        for res in self.processed_results:
-            click.echo(f"{res.source_file_name} -> {res.target_file_name}")
 
 
 def process_statement(
@@ -123,10 +123,20 @@ def process_statement(
         information about the processed statement. If an error occurs during processing,
         returns a Result object with error information.
     """
-    from monopoly.pipeline import Pipeline  # pylint: disable=import-outside-toplevel
+    # pylint: disable=import-outside-toplevel, too-many-locals
+    from monopoly.banks import BankDetector, banks
+    from monopoly.generic import GenericBank
+    from monopoly.pdf import PdfDocument, PdfParser
+    from monopoly.pipeline import Pipeline
 
     try:
-        pipeline = Pipeline(file)
+        document = PdfDocument(file)
+        document.unlock_document()
+        analyzer = BankDetector(document)
+        bank = analyzer.detect_bank(banks) or GenericBank
+        parser = PdfParser(bank, document)
+        pipeline = Pipeline(parser)
+
         statement = pipeline.extract(safety_check=safety_check)
         transactions = pipeline.transform(statement)
 

@@ -1,3 +1,5 @@
+from monopoly.banks import ExampleBank
+from monopoly.pdf import PdfDocument, PdfParser
 from monopoly.pipeline import Pipeline
 import argparse
 import glob, pathlib
@@ -37,7 +39,7 @@ def runPipeline(filename, output):
     transactions = pipeline.transform(statement)
     
     # Parsed transactions writen to a CSV file in the "example" directory
-    pipeline.load(
+    file_path = pipeline.load(
         transactions=transactions,
         statement=statement,
         output_directory=output,

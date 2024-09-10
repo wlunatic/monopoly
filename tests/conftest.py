@@ -1,10 +1,10 @@
 import os
-from unittest.mock import MagicMock, Mock, PropertyMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
-import fitz
 import pytest
+from pymupdf import Document
 
-from monopoly.bank_detector import BankDetector
+from monopoly.banks.detector import BankDetector
 from monopoly.config import DateOrder, PdfConfig, StatementConfig
 from monopoly.constants import EntryType
 from monopoly.handler import StatementHandler
@@ -21,7 +21,7 @@ def mock_env():
 
 @pytest.fixture
 def pdf_document():
-    yield PdfDocument()
+    yield PdfDocument(file_path="src/monopoly/examples/example_statement.pdf")
 
 
 @pytest.fixture
@@ -34,22 +34,6 @@ def mock_get_pages():
     with patch.object(PdfParser, "get_pages") as mock_get_pages:
         mock_get_pages.return_value = MagicMock()
         yield mock_get_pages
-
-
-@pytest.fixture
-def mock_document():
-    with patch(
-        "monopoly.pdf.PdfDocument.document", new_callable=PropertyMock
-    ) as mock_document_prop:
-        mock_document_instance = mock_document_prop.return_value
-        type(mock_document_instance).metadata = PropertyMock(
-            return_value={
-                "creator": "Adobe Acrobat 23.3",
-                "producer": "Adobe Acrobat Pro (64-bit)",
-            }
-        )
-        type(mock_document_instance).name = PropertyMock(return_value="foo")
-        yield mock_document_prop
 
 
 @pytest.fixture(scope="function")
@@ -70,7 +54,11 @@ def mock_bank():
 
 @pytest.fixture
 def parser(mock_bank):
-    parser = PdfParser(bank=mock_bank, document=None)
+    class MockDocument:
+        metadata_identifier = [None]
+
+    document = MockDocument()
+    parser = PdfParser(bank=mock_bank, document=document)
     yield parser
 
 
@@ -78,16 +66,12 @@ def setup_statement_fixture(
     statement_cls: BaseStatement,
     statement_config,
 ):
-    mock_parser = MagicMock(spec=PdfParser)
     mock_page = Mock(spec=PdfPage)
     mock_page.lines = ["foo", "bar"]
     mock_page.raw_text = ["foo\nbar"]
-    mock_parser.get_pages.return_value = [mock_page]
-
-    document = MagicMock(spec=fitz.Document)
+    document = MagicMock(spec=Document)
     document.name = "mock_document.pdf"
-    mock_parser.document = document
-    statement = statement_cls(parser=mock_parser, config=statement_config, header="foo")
+    statement = statement_cls(pages=[mock_page], config=statement_config, header="foo")
     yield statement
 
 

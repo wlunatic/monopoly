@@ -59,11 +59,21 @@ class DebitStatement(BaseStatement):
 
     @lru_cache
     def get_withdrawal_pos(self, page_number: int) -> int | None:
-        return self.get_column_pos("withdraw", page_number=page_number)
+        common_names = ["withdraw", "debit"]
+        for name in common_names:
+            if pos := self.get_column_pos(name, page_number=page_number):
+                return pos
+        logger.warning("`withdrawal` column not found in header")
+        return False
 
     @lru_cache
-    def get_deposit_pos(self, page_number: int, start: int) -> int | None:
-        return self.get_column_pos("deposit", page_number=page_number, start_pos=start)
+    def get_deposit_pos(self, page_number: int) -> int | None:
+        common_names = ["deposit", "credit"]
+        for name in common_names:
+            if pos := self.get_column_pos(name, page_number=page_number):
+                return pos
+        logger.warning("`deposit` column not found in header")
+        return False
 
     @lru_cache
     def get_column_pos(self, column_type: str, page_number: int, start_pos: int = 0) -> int | None:
@@ -90,8 +100,7 @@ class DebitStatement(BaseStatement):
         16 OCT       item                                     123.12
         ```
         """
-        pages = list(self.pages)
-        lines = pages[page_number].lines
+        lines = self.pages[page_number].lines
         for line in lines:
             header_start_pos = line.lower().find(column_name.lower(), start_pos)
             if header_start_pos == -1:
