@@ -67,10 +67,10 @@ class DebitStatement(BaseStatement):
         return False
 
     @lru_cache
-    def get_deposit_pos(self, page_number: int) -> int | None:
+    def get_deposit_pos(self, page_number: int, start_pos: int) -> int | None:
         common_names = ["deposit", "credit"]
         for name in common_names:
-            if pos := self.get_column_pos(name, page_number=page_number):
+            if pos := self.get_column_pos(name, page_number=page_number, start_pos=start_pos):
                 return pos
         logger.warning("`deposit` column not found in header")
         return False

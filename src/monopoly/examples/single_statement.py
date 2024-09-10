@@ -1,8 +1,9 @@
-from monopoly.banks import ExampleBank
+from monopoly.banks import BankDetector, banks
+from monopoly.generic import GenericBank
 from monopoly.pdf import PdfDocument, PdfParser
 from monopoly.pipeline import Pipeline
 import argparse
-import glob, pathlib
+import pathlib
 
 def main():
     # Initialize parser
@@ -28,9 +29,13 @@ def main():
     example(input_dir, output_dir)
     
 def runPipeline(filename, output):
-    pipeline = Pipeline(
-            file_path=filename,
-        )
+    
+    document = PdfDocument(file_path=filename)
+    analyzer = BankDetector(document)
+    bank = analyzer.detect_bank(banks) or GenericBank
+    parser = PdfParser(bank, document)
+    pipeline = Pipeline(parser)
+
     # This runs pdftotext on the PDF and
     # extracts transactions as raw text
     statement = pipeline.extract()
@@ -39,7 +44,7 @@ def runPipeline(filename, output):
     transactions = pipeline.transform(statement)
     
     # Parsed transactions writen to a CSV file in the "example" directory
-    file_path = pipeline.load(
+    pipeline.load(
         transactions=transactions,
         statement=statement,
         output_directory=output,
