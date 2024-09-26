@@ -26,6 +26,7 @@ class DateFormats(StrEnum):
 
 class ISO8601(RegexEnum):
     DD_MM = rf"\b({DateFormats.DD}[\/\-\s]{DateFormats.MM})"
+    D_MMM = rf"\b({DateFormats.D}[-\s]{DateFormats.MMM})"
     DD_MM_YY = rf"\b({DateFormats.DD}[\/\-\s]{DateFormats.MM}[\/\-\s]{DateFormats.YY})"
     DD_MM_YYYY = (
         rf"\b({DateFormats.DD}[\/\-\s.]{DateFormats.MM}[\/\-\s.]{DateFormats.YYYY})"

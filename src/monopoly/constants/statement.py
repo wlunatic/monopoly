@@ -17,6 +17,7 @@ class EntryType(AutoEnum):
 class BankNames(AutoEnum):
     CITIBANK = auto()
     DBS = auto()
+    GXS = auto()
     HSBC = auto()
     MAYBANK = auto()
     OCBC = auto()
@@ -150,6 +151,12 @@ class DebitTransactionPatterns(RegexEnum):
         rf"(?P<transaction_date>{ISO8601.DD_MM_YYYY})\s+"
         + SharedPatterns.DESCRIPTION
         + SharedPatterns.AMOUNT_EXTENDED_WITHOUT_EOL
+    )
+    GXS = (
+        rf"(?P<transaction_date>{ISO8601.D_MMM})\s+"
+        + SharedPatterns.DESCRIPTION
+        + SharedPatterns.AMOUNT_EXTENDED_WITHOUT_EOL
+        + SharedPatterns.BALANCE
     )
     MAYBANK = (
         rf"(?P<transaction_date>{ISO8601.DD_MM_YY})\s+"

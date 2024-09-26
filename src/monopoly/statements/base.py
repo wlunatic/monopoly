@@ -73,7 +73,37 @@ class BaseStatement(ABC):
 
         for page_num, page in enumerate(self.pages):
             for line_num, line in enumerate(page.lines):
-                if match := self.pattern.search(line):
+                # multiline
+                if self.config.multiline_transactions:
+                    # assumption 
+                    # date and description always same line
+                    # amouint and balance always same line
+                    patterns = str(self.pattern.value).split("\s+(?P<amount>")
+                    date_description_str = patterns[0].replace('+', '{2,}', 1)
+                    date_description_pattern = re.compile(rf'{date_description_str}$')
+                    amount_balance_pattern = re.compile(r"(?P<amount>" + patterns[1])
+                    if date_match := date_description_pattern.search(line):
+                        print("found match",date_match)
+                        transaction = self.get_multiline_transaction(
+                            match_dict=date_match.groupdict(), 
+                            date_pattern=date_description_pattern,
+                            amount_pattern=amount_balance_pattern,
+                            current_line=line, 
+                            lines=page.lines, 
+                            idx=line_num,
+                            page_num=page_num)
+                        print("transactions", transaction)
+                        transactions.append(transaction)
+                    # multiline_description = self.get_multiline_description(
+                    #     match.groupdict.description, line, lines, idx
+                    # )
+                    # match.groupdict.description = multiline_description
+    
+                    # print("pattern", self.pattern)
+                    # print("line", line)
+                # single line
+                elif match := self.pattern.search(line):
+                # if match := self.pattern.search(line):
                     if self._check_bound(match):
                         continue
 
@@ -91,6 +121,7 @@ class BaseStatement(ABC):
                     if (not processed_match.groupdict.description): 
                         continue
                     transaction = Transaction(**processed_match.groupdict)
+                    print("match here", transaction)
                     transactions.append(transaction)
 
         if not transactions:
@@ -129,6 +160,85 @@ class BaseStatement(ABC):
             )
             match.groupdict.description = multiline_description
         return match
+    
+    def get_multiline_transaction(
+        self,
+        match_dict: dict[str],
+        date_pattern: re.Pattern[str],
+        amount_pattern: re.Pattern[str],
+        current_line: str,
+        lines: list[str],
+        idx: int,
+        page_num: int,
+    ) -> Transaction:
+        """Checks if a transaction spans multiple lines, and
+        tries to combine them into a single string"""
+        transaction = Transaction("",0,"")
+        transaction.date = match_dict['transaction_date']
+        transaction.description = self.get_multiline_description(
+                match_dict['description'], current_line, lines, idx
+            )
+        
+        description_pos = current_line.find(match_dict['description'])
+        # next_line_words_pattern = re.compile(r"\s[A-Za-z]+")
+        # next_line_numbers_pattern = re.compile(SharedPatterns.AMOUNT)
+
+        for next_line in lines[idx - 2 :]:  # noqa: E203
+            # if transaction found, break
+            if transaction.date and transaction.description and transaction.amount:
+                break
+            
+            # if next line is blank, don't add the description
+            if not next_line:
+                continue
+
+            # if new date found on next line then break
+            if date_pattern.search(next_line):
+                break
+
+            # don't process line if the position of new line is in front 
+            # of description
+            next_line_text = next_line.strip()
+            next_line_start_pos = next_line.find(next_line_text.split(" ")[0])
+
+            if next_line_start_pos - description_pos <= 0:
+                break
+            
+            if amount_match := amount_pattern.search(next_line):
+                amount = amount_match.groupdict()['amount']
+                groupdict = TransactionGroupDict(description=transaction.description,
+                                                 amount=amount,
+                                                 transaction_date=transaction.date)
+                transaction_match = TransactionMatch(
+                        groupdict, amount_match, page_number=page_num
+                    )
+                pre_processed_match = self.pre_process_match(transaction_match)
+                transaction = Transaction(**pre_processed_match.groupdict)
+                print("match here", transaction)
+                # balance = amount_match.groupdict()['balance']
+                # transaction.amount = amount
+                break
+                
+
+            # # if there's an amount in the next line, and it's further than
+            # # 20 spaces away, we assume that this isn't part of the description
+            # # and is a footer line like "Total" or "Balance Carried Forward"
+            # next_line_words = next_line_words_pattern.search(next_line)
+            # next_line_numbers = next_line_numbers_pattern.search(next_line)
+
+            # if next_line_words and next_line_numbers:
+            #     _, words_end_pos = next_line_words.span()
+            #     numbers_start_pos, _ = next_line_numbers.span()
+
+            #     if (
+            #         numbers_start_pos > words_end_pos
+            #         and numbers_start_pos - words_end_pos > 20
+            #     ):
+            #         break
+
+            # description += " " + next_line
+
+        return transaction
 
     def get_multiline_description(
         self,
