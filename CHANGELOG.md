@@ -1,5 +1,48 @@
 # Changelog
 
+## [0.12.5] - 2024-09-25
+
+### ⛰️ Features
+
+- *(generic)* Support inconsistent header spacing across pages
+
+### 🛠️ Bug Fixes
+
+- *(generic)* Compile header_pattern
+
+## [0.12.4] - 2024-09-15
+
+### ⛰️ Features
+
+- *(banks/dbs)* Add support for dbs-posb consolidated
+
+### 🚜 Refactor
+
+- *(statement/debit)* Use regex to find header on each page
+
+### ⚙️ Miscellaneous Tasks
+
+- Add more specific error message for missing header
+
+## [0.12.3] - 2024-09-15
+
+### 🛠️ Bug Fixes
+
+- *(banks/ocbc)* Support statement date without 'TO'
+- *(banks/dbs)* Use transaction_bound to exclude balances
+
+### 🚜 Refactor
+
+- Add ISO8601 to constants namespace
+- Use ISO8601 for bank statement date patterns
+- *(banks)* Shorten config variable names
+- *(banks)* Declare name in bank instead of config
+
+### ⚙️ Miscellaneous Tasks
+
+- Remove redundant RELEASE_CHANGELOG.md
+- Lower missing debit headers to debug log level
+
 ## [0.12.2] - 2024-09-08
 
 ### 🛠️ Bug Fixes

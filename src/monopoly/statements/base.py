@@ -8,6 +8,7 @@ from dateparser import parse
 
 from monopoly.config import StatementConfig
 from monopoly.constants import Columns, SharedPatterns
+from monopoly.constants.date import ISO8601
 from monopoly.pdf import PdfPage
 from monopoly.statements.transaction import (
     Transaction,
@@ -36,10 +37,12 @@ class BaseStatement(ABC):
     def __init__(
         self,
         pages: list[PdfPage],
+        bank_name: str,
         config: StatementConfig,
         header: str,
     ):
         self.config = config
+        self.bank_name = bank_name
         self.pages = pages
         self.header = header
 
@@ -188,8 +191,11 @@ class BaseStatement(ABC):
     @cached_property
     def statement_date(self) -> datetime:
         pattern = self.config.statement_date_pattern
-        if not isinstance(pattern, re.Pattern):
-            raise TypeError(f"Pattern must be a string, not {type(pattern)}")
+        allowed_patterns = (re.Pattern, ISO8601)
+        if not isinstance(pattern, allowed_patterns):
+            raise TypeError(
+                f"Pattern must be one of {allowed_patterns}, not {type(pattern)}"
+            )
 
         for page in self.pages:
             for line in page.lines:

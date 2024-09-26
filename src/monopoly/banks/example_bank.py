@@ -10,9 +10,10 @@ from .base import BankBase
 class ExampleBank(BankBase):
     """Dummy class to help with reading the example PDF statement"""
 
-    credit_config = StatementConfig(
+    name = InternalBankNames.EXAMPLE
+
+    credit = StatementConfig(
         statement_type=EntryType.CREDIT,
-        bank_name=InternalBankNames.EXAMPLE,
         statement_date_pattern=regex(r"(\d{2}\-\d{2}\-\d{4})"),
         header_pattern=regex(r"(DATE.*DESCRIPTION.*AMOUNT)"),
         prev_balance_pattern=regex(
@@ -32,4 +33,4 @@ class ExampleBank(BankBase):
         ]
     ]
 
-    statement_configs = [credit_config]
+    statement_configs = [credit]

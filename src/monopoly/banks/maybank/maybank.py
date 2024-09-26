@@ -3,6 +3,7 @@ from re import compile as regex
 
 from monopoly.config import StatementConfig
 from monopoly.constants import (
+    ISO8601,
     BankNames,
     CreditTransactionPatterns,
     DebitTransactionPatterns,
@@ -17,19 +18,19 @@ logger = logging.getLogger(__name__)
 
 
 class Maybank(BankBase):
-    debit_config = StatementConfig(
+    name = BankNames.MAYBANK
+
+    debit = StatementConfig(
         statement_type=EntryType.DEBIT,
-        bank_name=BankNames.MAYBANK,
-        statement_date_pattern=regex(r"(?:結單日期)[:\s]+(\d{2}\/\d{2}\/\d{2})"),
+        statement_date_pattern=regex(rf"(?:結單日期)[:\s]+{ISO8601.DD_MM_YY}"),
         header_pattern=regex(r"(DATE.*DESCRIPTION.*AMOUNT.*BALANCE)"),
         transaction_pattern=DebitTransactionPatterns.MAYBANK,
         multiline_transactions=True,
     )
 
-    credit_config = StatementConfig(
+    credit = StatementConfig(
         statement_type=EntryType.CREDIT,
-        bank_name=BankNames.MAYBANK,
-        statement_date_pattern=regex(r"(\d{2}\s[A-Z]{3}\s\d{2})"),
+        statement_date_pattern=ISO8601.DD_MMM_YY,
         header_pattern=regex(r"(Date.*Description.*Amount)"),
         transaction_pattern=CreditTransactionPatterns.MAYBANK,
         prev_balance_pattern=StatementBalancePatterns.MAYBANK,
@@ -53,4 +54,4 @@ class Maybank(BankBase):
         ],
     ]
 
-    statement_configs = [debit_config, credit_config]
+    statement_configs = [credit, debit]

@@ -63,7 +63,9 @@ class DebitStatement(BaseStatement):
         for name in common_names:
             if pos := self.get_column_pos(name, page_number=page_number):
                 return pos
-        logger.warning("`withdrawal` column not found in header")
+        logger.debug(
+            "%s column not found in header on page %s", common_names, page_number
+        )
         return False
 
     @lru_cache
@@ -72,7 +74,9 @@ class DebitStatement(BaseStatement):
         for name in common_names:
             if pos := self.get_column_pos(name, page_number=page_number, start_pos=start_pos):
                 return pos
-        logger.warning("`deposit` column not found in header")
+        logger.debug(
+            "%s column not found in header on page %s", common_names, page_number
+        )
         return False
 
     @lru_cache
@@ -100,16 +104,20 @@ class DebitStatement(BaseStatement):
         16 OCT       item                                     123.12
         ```
         """
+        header_pattern = self.config.header_pattern
         lines = self.pages[page_number].lines
         for line in lines:
-            header_start_pos = line.lower().find(column_name.lower(), start_pos)
-            if header_start_pos == -1:
-                continue
-            return header_start_pos + len(column_name)
+            if match := header_pattern.search(line):
+                header = match.string.lower()
+                header_start_pos = header.find(column_name.lower(), start_pos)
+                if header_start_pos == -1:
+                    continue
+                return header_start_pos + len(column_name)
 
-        raise ValueError(
+        logger.debug(
             f"Debit header {column_name} cannot be found on page {page_number}"
         )
+        return -1
 
     @lru_cache
     def perform_safety_check(self) -> bool:

@@ -16,9 +16,10 @@ logger = logging.getLogger(__name__)
 
 
 class Citibank(BankBase):
-    credit_config = StatementConfig(
+    name = BankNames.CITIBANK
+
+    credit = StatementConfig(
         statement_type=EntryType.CREDIT,
-        bank_name=BankNames.CITIBANK,
         statement_date_pattern=regex(r"Statement\sDate\s+(.*)"),
         header_pattern=regex(r"(DATE.*DESCRIPTION.*AMOUNT)"),
         prev_balance_pattern=StatementBalancePatterns.CITIBANK,
@@ -34,4 +35,4 @@ class Citibank(BankBase):
         ]
     ]
 
-    statement_configs = [credit_config]
+    statement_configs = [credit]

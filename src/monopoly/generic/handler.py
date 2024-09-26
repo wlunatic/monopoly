@@ -1,5 +1,6 @@
 import logging
 from functools import cached_property
+from re import compile as regex
 from typing import Type
 
 from monopoly.banks import BankBase
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 class GenericBank(BankBase):
     identifiers = []
     statement_configs = None  # type: ignore
-
+    name = InternalBankNames.GENERIC
     """
     Empty bank class with variables that can be populated by
     the `GenericStatementHandler` class
@@ -26,9 +27,7 @@ class GenericBank(BankBase):
 class GenericStatementHandler(StatementHandler):
     def __init__(self, bank: Type[BankBase], pages: list[PdfPage]):
         self.analyzer = DatePatternAnalyzer(pages)
-        bank.statement_configs = list(
-            filter(None, [self.debit_config, self.credit_config])
-        )
+        bank.statement_configs = list(filter(None, [self.debit, self.credit]))
         super().__init__(bank, pages)
 
     # override get_header and ignore passed config, since
@@ -37,32 +36,30 @@ class GenericStatementHandler(StatementHandler):
         return self.header_pattern
 
     @cached_property
-    def debit_config(self):
+    def debit(self):
         if self.statement_type == EntryType.DEBIT:
             logger.debug("Creating debit statement config")
 
             return StatementConfig(
                 statement_type=EntryType.DEBIT,
-                bank_name=InternalBankNames.GENERIC,
                 transaction_pattern=self.transaction_pattern,
                 statement_date_pattern=self.statement_date_pattern,
                 multiline_transactions=self.multiline_transactions,
-                header_pattern=self.header_pattern,
+                header_pattern=regex(self.header_pattern),
             )
         return None
 
     @cached_property
-    def credit_config(self):
+    def credit(self):
         if self.statement_type == EntryType.CREDIT:
             logger.debug("Creating credit statement config")
 
             return StatementConfig(
                 statement_type=EntryType.CREDIT,
-                bank_name=InternalBankNames.GENERIC,
                 prev_balance_pattern=self.prev_balance_pattern,
                 transaction_pattern=self.transaction_pattern,
                 statement_date_pattern=self.statement_date_pattern,
-                header_pattern=self.header_pattern,
+                header_pattern=regex(self.header_pattern),
                 multiline_transactions=self.multiline_transactions,
             )
         return None

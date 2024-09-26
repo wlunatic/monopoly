@@ -145,7 +145,11 @@ class DebitTransactionPatterns(RegexEnum):
         rf"(?P<transaction_date>{ISO8601.DD_MM_YYYY})\s+"
         + SharedPatterns.DESCRIPTION
         + SharedPatterns.AMOUNT_EXTENDED_WITHOUT_EOL
-        + SharedPatterns.BALANCE
+    )
+    DBS_POSB_CONSOLIDATED = (
+        rf"(?P<transaction_date>{ISO8601.DD_MM_YYYY})\s+"
+        + SharedPatterns.DESCRIPTION
+        + SharedPatterns.AMOUNT_EXTENDED_WITHOUT_EOL
     )
     MAYBANK = (
         rf"(?P<transaction_date>{ISO8601.DD_MM_YY})\s+"
