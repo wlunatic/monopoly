@@ -4,8 +4,6 @@ from functools import lru_cache
 
 from monopoly.constants import EntryType
 from monopoly.statements.transaction import TransactionMatch
-from monopoly.pdf import PdfParser
-from monopoly.config import StatementConfig
 
 from .base import BaseStatement, SafetyCheckError
 
@@ -16,9 +14,7 @@ class DebitStatement(BaseStatement):
     """
     A dataclass representation of a debit statement
     """
-    def __init__(self, parser: PdfParser, config: StatementConfig, header: str):
-        super().__init__(parser, config, header)
-        self.statement_type = EntryType.DEBIT
+    statement_type = EntryType.DEBIT
 
     def pre_process_match(
         self, transaction_match: TransactionMatch
