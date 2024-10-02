@@ -78,7 +78,7 @@ class BaseStatement(ABC):
                     # assumption 
                     # date and description always same line
                     # amouint and balance always same line
-                    patterns = str(self.pattern.value).split("\s+(?P<amount>")
+                    patterns = str(self.pattern.value).split(r'\s+(?P<amount>')
                     date_description_str = patterns[0].replace('+', '{2,}', 1)
                     date_description_pattern = re.compile(rf'{date_description_str}$')
                     amount_balance_pattern = re.compile(r"(?P<amount>" + patterns[1])
@@ -185,7 +185,7 @@ class BaseStatement(ABC):
 
         for next_line in lines[idx - 2 :]:  # noqa: E203
             # if transaction found, break
-            if transaction.date and transaction.description and transaction.amount > 0:
+            if transaction.date and transaction.description and transaction.amount > 0 and transaction.suffix:
                 break
             
             # if next line is blank, don't add the description
