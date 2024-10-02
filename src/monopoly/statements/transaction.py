@@ -27,7 +27,7 @@ class TransactionGroupDict(Mapping):
     def __init__(
         self,
         description: str,
-        amount: str,
+        amount: str = 0,
         transaction_date: Optional[str] = None,
         suffix: Optional[str] = None,
         **_,

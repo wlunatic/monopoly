@@ -35,11 +35,11 @@ class DebitStatement(BaseStatement):
         Attempts to identify whether a transaction is a debit
         or credit entry based on the distance from the withdrawal
         or deposit columns.
-        """
+        """        
         page_number = transaction_match.page_number
         withdrawal_pos = self.get_withdrawal_pos(page_number)
         deposit_pos = self.get_deposit_pos(page_number, withdrawal_pos)
-
+        
         if deposit_pos and withdrawal_pos:
             amount = transaction_match.groupdict.amount
             line: str = transaction_match.match.string

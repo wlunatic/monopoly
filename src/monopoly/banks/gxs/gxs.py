@@ -7,6 +7,7 @@ from monopoly.constants import (
     DebitTransactionPatterns,
     EntryType,
 )
+from monopoly.constants.date import ISO8601
 from monopoly.identifiers import MetadataIdentifier, TextIdentifier
 
 from ..base import BankBase
@@ -15,10 +16,11 @@ logger = logging.getLogger(__name__)
 
 
 class Gxs(BankBase):
-    debit_config = StatementConfig(
+    name = BankNames.GXS
+    
+    debit = StatementConfig(
         statement_type=EntryType.DEBIT,
-        bank_name=BankNames.GXS,
-        statement_date_pattern=regex(r"(\d{2}\s[A-Za-z]{3}\s\d{4})"),
+        statement_date_pattern=ISO8601.DD_MMM_YYYY,
         multiline_transactions=True,
         header_pattern=regex(r"(Withdrawal.*Deposit.*Balance)"),
         transaction_pattern=DebitTransactionPatterns.GXS,
@@ -31,4 +33,4 @@ class Gxs(BankBase):
         ],
     ]
 
-    statement_configs = [debit_config]
+    statement_configs = [debit]
