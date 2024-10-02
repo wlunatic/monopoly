@@ -4,6 +4,7 @@ from monopoly.pdf import PdfDocument, PdfParser
 from monopoly.pipeline import Pipeline
 import argparse
 import pathlib
+import os
 
 def main():
     # Initialize parser
@@ -16,19 +17,27 @@ def main():
 
     # Read arguments from command line
     args = parser.parse_args()
+    
+    input_dir = ''
+    output_dir = ''
 
     if not args.file and not args.directory:
         raise RuntimeError("Please define `--file` or `--directory` for your input")
-    
+    else:
+        input_dir = args.directory if not args.file else args.file
+        print("Input file/directory defined:", input_dir)
+        
     if not args.output:
-        raise RuntimeError("Please define `--output` for your output directory")
-    
-    input_dir = args.directory if not args.file else args.file
-    output_dir = args.output
+        output_dir = os.getcwd()
+        print("No output directory defined, output will be:", output_dir)
+        # raise RuntimeError("Please define `--output` for your output directory")
+    else:
+        output_dir = args.output
     
     example(input_dir, output_dir)
     
 def runPipeline(filename, output):
+    print("Processing... ", filename)
     
     document = PdfDocument(file_path=filename)
     analyzer = BankDetector(document)
@@ -49,6 +58,8 @@ def runPipeline(filename, output):
         statement=statement,
         output_directory=output,
     )
+    
+    print("Processed completed: ", output)
     
 
 def example(input_dir: str, output_dir: str):
