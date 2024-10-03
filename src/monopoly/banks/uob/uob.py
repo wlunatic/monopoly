@@ -5,6 +5,7 @@ from monopoly.config import StatementConfig
 from monopoly.constants import (
     ISO8601,
     BankNames,
+    CreditTransactionPatterns,
     DebitTransactionPatterns,
     EntryType,
     StatementBalancePatterns,
@@ -24,7 +25,7 @@ class Uob(BankBase):
         statement_date_pattern=regex(rf"Statement Date.*{ISO8601.DD_MMM_YYYY}"),
         header_pattern=regex(r"(Description of Transaction.*Transaction Amount)"),
         prev_balance_pattern=StatementBalancePatterns.UOB,
-        transaction_pattern=DebitTransactionPatterns.UOB,
+        transaction_pattern=CreditTransactionPatterns.UOB,
         multiline_transactions=True,
     )
 
