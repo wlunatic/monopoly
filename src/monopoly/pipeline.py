@@ -51,8 +51,8 @@ class Pipeline:
         if not statement.statement_date:
             raise ValueError("No statement date found")
 
-        # if safety_check and statement.config.safety_check:
-        #     statement.perform_safety_check()
+        if safety_check and statement.config.safety_check:
+            statement.perform_safety_check()
 
         return statement
 

@@ -24,6 +24,7 @@ class Gxs(BankBase):
         multiline_transactions=True,
         header_pattern=regex(r"(Withdrawal.*Deposit.*Balance)"),
         transaction_pattern=DebitTransactionPatterns.GXS,
+        safety_check=False
     )
 
     identifiers = [
