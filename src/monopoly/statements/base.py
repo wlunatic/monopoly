@@ -83,18 +83,21 @@ class BaseStatement(ABC):
                     date_description_pattern = re.compile(rf'{date_description_str}$')
                     amount_balance_pattern = re.compile(r"(?P<amount>" + patterns[1])
                     if date_match := date_description_pattern.search(line):
-                        # check if transaction at same line, only description is multiline
                         groupdict = TransactionGroupDict(**date_match.groupdict())
-                        match = TransactionMatch(
-                            groupdict, date_match, page_number=page_num
-                        )
                         
+                        # check if transaction at same line, only description is multiline
                         if transaction_match := self.pattern.search(line):
+                            if self._check_bound(transaction_match):
+                                continue
                             single_groupdict = TransactionGroupDict(**transaction_match.groupdict())
                             single_match = TransactionMatch(
                                 single_groupdict, transaction_match, page_number=page_num
                             )
                             match = self.pre_process_match(single_match)
+                        else:
+                            match = TransactionMatch(
+                                groupdict, date_match, page_number=page_num
+                            )
                     
                         transaction = self.get_multiline_transaction(
                             match_trans=match, 
@@ -176,10 +179,10 @@ class BaseStatement(ABC):
         """Checks if a transaction spans multiple lines, and
         tries to combine them into a single column"""
         match_dict = match_trans.groupdict
-        transaction = Transaction("",match_dict['amount'],"",match_dict['suffix'])
+        transaction = Transaction(**match_trans.groupdict)
         transaction.date = match_dict['transaction_date']
         transaction.description = self.get_multiline_description(
-                match_dict['description'], current_line, lines, idx
+                transaction.description, current_line, lines, idx
             )        
         description_pos = current_line.find(match_dict['description'])
 
