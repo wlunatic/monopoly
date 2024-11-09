@@ -98,7 +98,7 @@ class BaseStatement(ABC):
                             match = TransactionMatch(
                                 groupdict, date_match, page_number=page_num
                             )
-                    
+                                                
                         transaction = self.get_multiline_transaction(
                             match_trans=match, 
                             date_pattern=date_description_pattern,
@@ -107,7 +107,8 @@ class BaseStatement(ABC):
                             lines=page.lines, 
                             idx=line_num,
                             page_num=page_num)
-                        transactions.append(transaction)
+                        if (transaction.description):
+                            transactions.append(transaction)
                 # single line
                 elif match := self.pattern.search(line):
                     if self._check_bound(match):
