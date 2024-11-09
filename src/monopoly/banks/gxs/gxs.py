@@ -30,7 +30,7 @@ class Gxs(BankBase):
     identifiers = [
         [
             TextIdentifier("GXS"),
-            MetadataIdentifier(creator="Chromium", producer="Skia/PDF m117"),
+            MetadataIdentifier(creator="Chromium", producer="Skia/PDF"),
         ],
     ]
 
